@@ -1,47 +1,192 @@
-CREATE DATABASE IF NOT EXISTS tech_company DEFAULT CHARACTER SET utf8;
 USE tech_company;
-DROP TABLE if exists employees;
-DROP TABLE if exists departments;
+/*
+        OBLIGATORISK OPGAVE - TECH COMPANY
+        AF: Zakariya Berrhili
+*/
 
-CREATE TABLE departments (
-                             department_number INTEGER,
-                             department_name VARCHAR(30),
-                             office_location VARCHAR(30),
-                             PRIMARY KEY (department_number)
+
+-- SINGLE TABLE ASSIGNMENTS--
+
+
+-- Finder medarbejder_id for MARTIN
+SELECT employee_number
+FROM employees
+WHERE employee_name = 'MARTIN';
+
+
+-- Ansatte med mere end 1500 i lon
+SELECT employee_name, salary
+FROM employees
+WHERE salary > 1500;
+
+-- Lister hvis man er saelger og lon > 1300
+SELECT employee_name, salary
+FROM employees
+WHERE job_title = 'SALESMAN' AND salary > 1300;
+
+
+-- Lister ansatte som ikke er saelgere
+SELECT employee_name
+FROM employees
+WHERE job_title <> 'SALESMAN';
+
+-- Viser clerks med lon -10%
+SELECT employee_name, salary, salary * 0.9 AS ny_lon
+FROM employees
+WHERE job_title = 'CLERK';
+
+-- Ansatte foer maj 1981
+SELECT employee_name, hire_date
+FROM employees
+WHERE hire_date < '1981-05-01';
+
+-- Sorter ansatte efter lon (stoerst foerst)
+SELECT employee_name, salary
+FROM employees
+ORDER BY salary DESC;
+
+-- Sorter afdelinger efter lokation
+SELECT department_name, office_location
+FROM departments
+ORDER BY office_location;
+
+-- Find department i New York
+SELECT department_name
+FROM departments
+WHERE office_location = 'NEW YORK';
+
+-- Find ansatte som starter med J og slutter med S
+SELECT employee_name
+FROM employees
+WHERE employee_name LIKE 'J%S';
+
+-- Find ansatte som starter med J og slutter med S og er manager
+SELECT employee_name
+FROM employees
+WHERE employee_name LIKE 'J%S'
+  AND job_title = 'MANAGER';
+
+-- Antal ansatte pr. afdeling
+SELECT department_number, COUNT(*) AS antal_ansatte
+FROM employees
+GROUP BY department_number;
+
+
+-- AGGREGATE FUNCTIONS--
+
+
+-- Antal ansatte i alt
+SELECT COUNT(*) AS total_ansatte
+FROM employees;
+
+-- Sum af alle lonninger (uden commission)
+SELECT SUM(salary) AS total_lon
+FROM employees;
+
+-- Gennemsnitslon i department 20
+SELECT AVG(salary) AS gennemsnit
+FROM employees
+WHERE department_number = 20;
+
+-- Unikke jobtitler i firmaet
+SELECT DISTINCT job_title
+FROM employees;
+
+-- Antal ansatte pr. afdeling
+SELECT department_number, COUNT(*) AS antal
+FROM employees
+GROUP BY department_number;
+
+-- Maks. lon pr. afdeling, sorteret faldende
+SELECT department_number, MAX(salary) AS max_lon
+FROM employees
+GROUP BY department_number
+ORDER BY max_lon DESC;
+
+-- Total sum af lon + provision
+SELECT SUM(salary + IFNULL(commission, 0)) AS total_indkomst
+FROM employees;
+
+
+-- JOIN ASSIGNMENTS
+-- Inner join employees og departments
+SELECT *
+FROM employees e
+         INNER JOIN departments d
+                    ON e.department_number = d.department_number;
+
+-- Employee_name og department_name, sorteret A-Z
+SELECT e.employee_name, d.department_name
+FROM employees e
+         INNER JOIN departments d
+                    ON e.department_number = d.department_number
+ORDER BY e.employee_name;
+
+-- Left join employees og departments
+SELECT e.employee_name, d.department_name
+FROM employees e
+         LEFT JOIN departments d
+                   ON e.department_number = d.department_number;
+
+-- Hvilken afdeling mangler i count-query? OPERATIONS (40)
+-- fordi der ikke er nogen ansatte i den.
+
+-- Brug RIGHT JOIN for at faa alle departments med
+SELECT d.department_name, COUNT(e.employee_number) AS antal
+FROM employees e
+         RIGHT JOIN departments d
+                    ON e.department_number = d.department_number
+GROUP BY d.department_name;
+
+-- SCOTTs query: join employees med deres managers
+SELECT *
+FROM employees employee
+         JOIN employees manager
+              ON employee.manager_id = manager.employee_number
+ORDER BY employee.employee_name;
+
+-- To kolonner: ansatte og deres manager
+SELECT e.employee_name AS medarbejder, m.employee_name AS manager
+FROM employees e
+         JOIN employees m
+              ON e.manager_id = m.employee_number;
+
+-- Afdelinger med mere end 3 ansatte (HAVING)
+SELECT department_number, COUNT(*) AS antal
+FROM employees
+GROUP BY department_number
+HAVING COUNT(*) > 3;
+
+-- Ansatte med lon over gennemsnittet
+SELECT employee_name, salary
+FROM employees
+WHERE salary > (SELECT AVG(salary) FROM employees);
+
+
+-- MANY-TO-MANY RELATION
+-- Opret leaders tabel
+CREATE TABLE leaders (
+                         leader_id INT PRIMARY KEY AUTO_INCREMENT,
+                         leader_name VARCHAR(30)
 );
 
-CREATE TABLE employees (
-                           employee_number INTEGER,
-                           employee_name VARCHAR(30),
-                           job_title VARCHAR(30),
-                           manager_id INTEGER,
-                           hire_date DATE,
-                           salary DECIMAL(10,2),
-                           commission DECIMAL(10,2),
-                           department_number INTEGER,
-                           PRIMARY KEY (employee_number),
-                           FOREIGN KEY (department_number) REFERENCES departments(department_number)
+-- Opret join tabel employees_leaders
+CREATE TABLE employees_leaders (
+                                   employee_number INT,
+                                   leader_id INT,
+                                   PRIMARY KEY (employee_number, leader_id),
+                                   FOREIGN KEY (employee_number) REFERENCES employees(employee_number),
+                                   FOREIGN KEY (leader_id) REFERENCES leaders(leader_id)
 );
 
+-- Indsaet leaders
+INSERT INTO leaders (leader_name) VALUES ('Alice'), ('Bob');
 
-INSERT INTO departments (department_number, department_name, office_location) VALUES (10, 'ACCOUNTING', 'NEW YORK');
-INSERT INTO departments (department_number, department_name, office_location) VALUES (20, 'RESEARCH', 'DALLAS');
-INSERT INTO departments (department_number, department_name, office_location) VALUES (30, 'SALES', 'CHICAGO');
-INSERT INTO departments (department_number, department_name, office_location) VALUES (40, 'OPERATIONS', 'BOSTON');
+-- Link employees til leaders
+INSERT INTO employees_leaders (employee_number, leader_id) VALUES (7369, 1), (7499, 1), (7521, 2);
 
-INSERT INTO employees (employee_number, employee_name, job_title, manager_id, hire_date, salary, commission, department_number) VALUES (7369, 'SMITH', 'CLERK', 7902, '1980-12-17', 800, NULL, 20);
-INSERT INTO employees (employee_number, employee_name, job_title, manager_id, hire_date, salary, commission, department_number) VALUES (7499, 'ALLEN', 'SALESMAN', 7698, '1981-02-20', 1600, 300, 30);
-INSERT INTO employees (employee_number, employee_name, job_title, manager_id, hire_date, salary, commission, department_number) VALUES (7521, 'WARD', 'SALESMAN', 7698, '1981-02-22',  1250, 500, 30);
-INSERT INTO employees (employee_number, employee_name, job_title, manager_id, hire_date, salary, commission, department_number) VALUES (7566, 'JONES', 'MANAGER', 7839, '1981-04-02', 2975, NULL, 20);
-INSERT INTO employees (employee_number, employee_name, job_title, manager_id, hire_date, salary, commission, department_number) VALUES (7654, 'MARTIN', 'SALESMAN', 7698, '1981-09-28', 1250, 1400, 30);
-INSERT INTO employees (employee_number, employee_name, job_title, manager_id, hire_date, salary, commission, department_number) VALUES (7698, 'BLAKE', 'MANAGER', 7839, '1981-05-01', 2850, NULL, 30);
-INSERT INTO employees (employee_number, employee_name, job_title, manager_id, hire_date, salary, commission, department_number) VALUES (7782, 'CLARK', 'MANAGER', 7839, '1981-06-09', 2450, NULL, 10);
-INSERT INTO employees (employee_number, employee_name, job_title, manager_id, hire_date, salary, commission, department_number) VALUES (7788, 'SCOTT', 'ANALYST', 7566, '1987-04-19', 3000, NULL, 20);
-INSERT INTO employees (employee_number, employee_name, job_title, manager_id, hire_date, salary, commission, department_number) VALUES (7839, 'KING', 'PRESIDENT', NULL, '1981-11-17', 5000, NULL, NULL);
-INSERT INTO employees (employee_number, employee_name, job_title, manager_id, hire_date, salary, commission, department_number) VALUES (7844, 'TURNER', 'SALESMAN', 7698, '1981-09-08', 1500, 0, 30);
-INSERT INTO employees (employee_number, employee_name, job_title, manager_id, hire_date, salary, commission, department_number) VALUES (7876, 'ADAMS', 'CLERK', 7788, '1987-05-23', 1100, NULL, 20);
-INSERT INTO employees (employee_number, employee_name, job_title, manager_id, hire_date, salary, commission, department_number) VALUES (7900, 'JAMES', 'CLERK', 7698, '1981-12-03', 950, NULL, 30);
-INSERT INTO employees (employee_number, employee_name, job_title, manager_id, hire_date, salary, commission, department_number) VALUES (7902, 'FORD', 'ANALYST', 7566, '1981-12-03', 3000, NULL, 20);
-INSERT INTO employees (employee_number, employee_name, job_title, manager_id, hire_date, salary, commission, department_number) VALUES (7934, 'MILLER', 'CLERK', 7782, '1982-01-23', 1300, NULL, 10);
-
-COMMIT;
+-- Many-to-many query: ansatte og leaders
+SELECT e.employee_name, l.leader_name
+FROM employees e
+         JOIN employees_leaders el ON e.employee_number = el.employee_number
+         JOIN leaders l ON el.leader_id = l.leader_id;
