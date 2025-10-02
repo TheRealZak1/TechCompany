@@ -19,7 +19,8 @@
 ---
 
 ##Filstruktur
-- answers.sql
+- tech_company.sql
+- tech_company_datasaet.sql
 - README.md
 
 ---
